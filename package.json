@@ -1,0 +1,25 @@
+{
+  "name": "game-review-ai",
+  "version": "1.0.0",
+  "description": "AI Powered Game Review Website",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "game",
+    "review",
+    "ai",
+    "gemini"
+  ],
+  "author": "Sravanth",
+  "license": "ISC",
+  "dependencies": {
+    "@mradex77/google-play-scraper": "^1.1.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1"
+  }
+}

@@ -1,0 +1,74 @@
+Attached Element Context from Integrated Browser
+
+Element: section.hero
+
+URL: http://localhost:3000/
+
+HTML Path: div.container > section.hero
+
+Outer HTML:
+```html
+<section class="hero">
+
+        <div class="tag">
+            ✨ AI POWERED GAME REVIEWS
+        </div>
+
+        <h1>
+            Discover Your Next
+            <span class="gradient-text">
+                Game.
+            </span>
+        </h1>
+
+        <p>
+            Search any game and instantly explore
+            its rating, genre, developer, features,
+            downloads and AI-generated review.
+        </p>
+
+
+        <!-- SEARCH -->
+
+        <div class="search-box">
+
+            <input type="text" id="gameInput" placeholder="Search a game... e.g. Free Fire" autocomplete="off">
+
+            <button type="button" id="searchButton" class="search-btn" onclick="askAI()">
+                🔍 Search
+            </button>
+
+        </div>
+
+    </section>
+```
+
+Dimensions:
+- top: 40px
+- left: 33px
+- width: 762px
+- height: 502px
+
+CSS:
+```css
+* { margin: 0;
+            padding: 0;
+            box-sizing: border-box; }
+.hero { text-align: center;
+            padding: 75px 0 50px; }
+
+/* Inherited */
+body { font-family: Arial, Helvetica, sans-serif; color: white }
+
+/* Resolved values */
+margin: 0px;
+padding: 75px 0px 50px;
+box-sizing: border-box;
+color: rgb(255, 255, 255);
+display: block;
+font-family: Arial, Helvetica, sans-serif;
+height: 502.424px;
+text-align: center;
+unicode-bidi: isolate /*UA*/;
+width: 761.648px;
+```

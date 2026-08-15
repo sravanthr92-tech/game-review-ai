@@ -1,0 +1,350 @@
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:Arial, Helvetica, sans-serif;
+}
+
+body{
+
+    background:linear-gradient(135deg,#1a002b,#35004d,#5b008a);
+    color:white;
+    min-height:100vh;
+
+}
+
+/* HEADER */
+
+header{
+
+    text-align:center;
+    padding:30px;
+
+}
+
+header h1{
+
+    font-size:42px;
+    margin-bottom:10px;
+
+}
+
+header p{
+
+    color:#d9b3ff;
+    font-size:18px;
+
+}
+
+/* SEARCH */
+
+.search-box{
+
+    width:90%;
+    max-width:900px;
+
+    margin:30px auto;
+
+    display:flex;
+    justify-content:center;
+    gap:15px;
+
+}
+
+.search-box input{
+
+    flex:1;
+
+    padding:16px;
+
+    border:none;
+
+    border-radius:10px;
+
+    font-size:18px;
+
+}
+
+.search-box button{
+
+    padding:16px 35px;
+
+    border:none;
+
+    border-radius:10px;
+
+    background:#9b00ff;
+
+    color:white;
+
+    cursor:pointer;
+
+    font-size:18px;
+
+    transition:.3s;
+
+}
+
+.search-box button:hover{
+
+    background:#c54cff;
+
+}
+
+/* TOP GAMES */
+
+.top-games{
+
+    width:90%;
+
+    max-width:1100px;
+
+    margin:auto;
+
+    text-align:center;
+
+}
+
+.top-games h2{
+
+    margin-bottom:25px;
+
+}
+
+.cards{
+
+    display:flex;
+
+    gap:20px;
+
+    justify-content:center;
+
+    flex-wrap:wrap;
+
+}
+
+.card{
+
+    width:250px;
+
+    background:rgba(255,255,255,.12);
+
+    padding:20px;
+
+    border-radius:15px;
+
+    backdrop-filter:blur(10px);
+
+    box-shadow:0 0 20px rgba(0,0,0,.4);
+
+}
+
+.card h3{
+
+    margin-bottom:15px;
+
+}
+
+/* RESULT */
+
+.result{
+
+    width:90%;
+
+    max-width:1100px;
+
+    margin:40px auto;
+
+    display:flex;
+
+    gap:30px;
+
+    background:rgba(255,255,255,.12);
+
+    padding:30px;
+
+    border-radius:20px;
+
+    flex-wrap:wrap;
+
+}
+
+.left{
+
+    flex:1;
+
+    min-width:250px;
+
+    text-align:center;
+
+}
+
+.left img{
+
+    width:250px;
+
+    border-radius:20px;
+
+    display:none;
+
+}
+
+.right{
+
+    flex:2;
+
+    min-width:300px;
+
+}
+
+.right h2{
+
+    margin-bottom:20px;
+
+    color:#ffdd57;
+
+}
+
+.right p{
+
+    margin:12px 0;
+
+    font-size:18px;
+
+}
+
+/* FEATURES */
+
+.features{
+
+    width:90%;
+
+    max-width:1100px;
+
+    margin:40px auto;
+
+    background:rgba(255,255,255,.12);
+
+    padding:30px;
+
+    border-radius:20px;
+
+}
+
+.features h2{
+
+    margin-bottom:20px;
+
+}
+
+.features li{
+
+    margin:10px 0;
+
+    font-size:18px;
+
+}
+
+/* AI REVIEW */
+
+.review{
+
+    width:90%;
+
+    max-width:1100px;
+
+    margin:40px auto;
+
+    background:rgba(255,255,255,.12);
+
+    padding:30px;
+
+    border-radius:20px;
+
+}
+
+.review h2{
+
+    margin-bottom:20px;
+
+}
+
+.review p{
+
+    line-height:1.8;
+
+    margin-bottom:25px;
+
+}
+
+.review button{
+
+    padding:15px 35px;
+
+    border:none;
+
+    border-radius:10px;
+
+    background:#00c853;
+
+    color:white;
+
+    font-size:18px;
+
+    cursor:pointer;
+
+    transition:.3s;
+
+}
+
+.review button:hover{
+
+    background:#00e676;
+
+}
+
+/* FOOTER */
+
+footer{
+
+    text-align:center;
+
+    padding:30px;
+
+    color:#ddd;
+
+}
+
+/* MOBILE */
+
+@media(max-width:768px){
+
+.result{
+
+flex-direction:column;
+
+text-align:center;
+
+}
+
+.cards{
+
+flex-direction:column;
+
+align-items:center;
+
+}
+
+.search-box{
+
+flex-direction:column;
+
+}
+
+.search-box button{
+
+width:100%;
+
+}
+
+}

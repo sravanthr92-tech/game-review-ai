@@ -1,0 +1,1102 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>GameScope AI</title>
+
+    <style>
+
+        /* =========================================
+           RESET
+        ========================================= */
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+
+        /* =========================================
+           BODY
+        ========================================= */
+
+        body {
+
+            font-family:
+                Arial,
+                Helvetica,
+                sans-serif;
+
+            background:
+                radial-gradient(
+                    circle at top left,
+                    #6d1cff 0%,
+                    transparent 32%
+                ),
+
+                radial-gradient(
+                    circle at bottom right,
+                    #a100ff 0%,
+                    transparent 30%
+                ),
+
+                #090014;
+
+            color: white;
+
+            min-height: 100vh;
+        }
+
+
+        /* =========================================
+           MAIN CONTAINER
+        ========================================= */
+
+        .container {
+
+            width: min(1150px, 92%);
+
+            margin: auto;
+        }
+
+
+        /* =========================================
+           NAVBAR
+        ========================================= */
+
+        nav {
+
+            height: 75px;
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: space-between;
+
+            border-bottom:
+                1px solid
+                rgba(255,255,255,0.1);
+        }
+
+
+        .logo {
+
+            font-size: 25px;
+
+            font-weight: 800;
+
+            letter-spacing: 1px;
+        }
+
+
+        .logo span {
+
+            color: #c64cff;
+        }
+
+
+        .nav-badge {
+
+            padding: 9px 16px;
+
+            border:
+                1px solid
+                #a82cff;
+
+            border-radius: 30px;
+
+            color: #e4a8ff;
+
+            font-size: 13px;
+        }
+
+
+        /* =========================================
+           HERO
+        ========================================= */
+
+        .hero {
+
+            text-align: center;
+
+            padding:
+                75px 0 50px;
+        }
+
+
+        .tag {
+
+            display: inline-block;
+
+            padding:
+                8px 18px;
+
+            border:
+                1px solid
+                #8e2cff;
+
+            border-radius: 30px;
+
+            color: #dca4ff;
+
+            margin-bottom: 25px;
+
+            background:
+                rgba(142,44,255,0.08);
+        }
+
+
+        .hero h1 {
+
+            font-size:
+                clamp(42px, 7vw, 78px);
+
+            line-height: 1;
+
+            font-weight: 900;
+
+            margin-bottom: 25px;
+        }
+
+
+        .gradient-text {
+
+            background:
+                linear-gradient(
+                    90deg,
+                    #b62cff,
+                    #f36bff
+                );
+
+            -webkit-background-clip: text;
+
+            -webkit-text-fill-color: transparent;
+        }
+
+
+        .hero p {
+
+            max-width: 700px;
+
+            margin: auto;
+
+            color: #c5b8d1;
+
+            font-size: 18px;
+
+            line-height: 1.7;
+        }
+
+
+        /* =========================================
+           SEARCH BOX
+        ========================================= */
+
+        .search-box {
+
+            max-width: 850px;
+
+            margin:
+                35px auto 0;
+
+            padding: 8px;
+
+            display: flex;
+
+            gap: 8px;
+
+            background:
+                rgba(255,255,255,0.08);
+
+            border:
+                1px solid
+                rgba(255,255,255,0.15);
+
+            border-radius: 20px;
+
+            backdrop-filter: blur(15px);
+        }
+
+
+        #gameInput {
+
+            flex: 1;
+
+            border: none;
+
+            outline: none;
+
+            background: transparent;
+
+            color: white;
+
+            padding: 20px;
+
+            font-size: 17px;
+        }
+
+
+        #gameInput::placeholder {
+
+            color: #998ba7;
+        }
+
+
+        #searchButton {
+
+            border: none;
+
+            cursor: pointer;
+
+            padding:
+                0 30px;
+
+            min-width: 150px;
+
+            border-radius: 15px;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #8f00ff,
+                    #c52cff
+                );
+
+            color: white;
+
+            font-size: 16px;
+
+            font-weight: bold;
+
+            transition: 0.25s;
+        }
+
+
+        #searchButton:hover {
+
+            transform:
+                translateY(-2px);
+
+            box-shadow:
+                0 10px 30px
+                rgba(180,0,255,0.35);
+        }
+
+
+        #searchButton:disabled {
+
+            opacity: 0.6;
+
+            cursor: not-allowed;
+
+            transform: none;
+        }
+
+
+        /* =========================================
+           TRENDING
+        ========================================= */
+
+        .section-title {
+
+            display: flex;
+
+            justify-content:
+                space-between;
+
+            align-items: center;
+
+            margin:
+                60px 0 20px;
+        }
+
+
+        .section-title h2 {
+
+            font-size: 25px;
+        }
+
+
+        .section-title span {
+
+            color: #8e7c9d;
+
+            font-size: 14px;
+        }
+
+
+        .trend-grid {
+
+            display: grid;
+
+            grid-template-columns:
+                repeat(3, 1fr);
+
+            gap: 18px;
+        }
+
+
+        .trend-card {
+
+            padding: 25px;
+
+            min-height: 145px;
+
+            border-radius: 20px;
+
+            background:
+                rgba(255,255,255,0.07);
+
+            border:
+                1px solid
+                rgba(255,255,255,0.1);
+
+            transition: 0.25s;
+
+            cursor: pointer;
+        }
+
+
+        .trend-card:hover {
+
+            transform:
+                translateY(-5px);
+
+            border-color:
+                #a62cff;
+
+            background:
+                rgba(166,44,255,0.12);
+        }
+
+
+        .trend-icon {
+
+            font-size: 30px;
+
+            margin-bottom: 18px;
+        }
+
+
+        .trend-card small {
+
+            color: #9f91aa;
+
+            display: block;
+
+            margin-bottom: 8px;
+
+            text-transform:
+                uppercase;
+
+            letter-spacing: 1px;
+        }
+
+
+        .trend-card strong {
+
+            font-size: 20px;
+        }
+
+
+        /* =========================================
+           RESULT CONTAINER
+        ========================================= */
+
+        #resultContainer {
+
+            margin-top: 50px;
+        }
+
+
+        /* =========================================
+           WELCOME
+        ========================================= */
+
+        .welcome {
+
+            padding: 40px;
+
+            text-align: center;
+
+            border-radius: 22px;
+
+            background:
+                rgba(255,255,255,0.05);
+
+            border:
+                1px solid
+                rgba(255,255,255,0.1);
+        }
+
+
+        .welcome h2 {
+
+            margin-bottom: 12px;
+
+            font-size: 28px;
+        }
+
+
+        .welcome p {
+
+            color: #9e91a9;
+
+            line-height: 1.7;
+        }
+
+
+        /* =========================================
+           LOADING
+        ========================================= */
+
+        .loading {
+
+            padding: 40px;
+
+            text-align: center;
+
+            border-radius: 22px;
+
+            background:
+                rgba(255,255,255,0.05);
+
+            border:
+                1px solid
+                rgba(255,255,255,0.1);
+
+            color: #dca4ff;
+
+            font-size: 18px;
+        }
+
+
+        /* =========================================
+           RESULT CARD
+        ========================================= */
+
+        .result-card {
+
+            display: grid;
+
+            grid-template-columns:
+                300px 1fr;
+
+            gap: 35px;
+
+            padding: 30px;
+
+            border-radius: 25px;
+
+            background:
+                rgba(255,255,255,0.07);
+
+            border:
+                1px solid
+                rgba(255,255,255,0.12);
+
+            box-shadow:
+                0 25px 80px
+                rgba(0,0,0,0.3);
+        }
+
+
+        /* =========================================
+           GAME COVER
+        ========================================= */
+
+        .cover {
+
+            width: 100%;
+
+            height: 420px;
+
+            overflow: hidden;
+
+            border-radius: 18px;
+
+            background:
+                #180526;
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: center;
+        }
+
+
+        .cover img {
+
+            width: 100%;
+
+            height: 100%;
+
+            object-fit: cover;
+
+            display: block;
+        }
+
+
+        .cover.missing {
+
+            border:
+                1px solid
+                rgba(255,255,255,0.1);
+        }
+
+
+        .img-missing {
+
+            color: #a999b4;
+
+            text-align: center;
+
+            padding: 20px;
+        }
+
+
+        /* =========================================
+           RESULT INFORMATION
+        ========================================= */
+
+        .result-info h2 {
+
+            font-size: 36px;
+
+            margin-bottom: 20px;
+        }
+
+
+        /* =========================================
+           STATS
+        ========================================= */
+
+        .stats {
+
+            display: grid;
+
+            grid-template-columns:
+                repeat(2, 1fr);
+
+            gap: 12px;
+
+            margin: 20px 0;
+        }
+
+
+        .stat {
+
+            padding: 16px;
+
+            border-radius: 14px;
+
+            background:
+                rgba(255,255,255,0.06);
+
+            border:
+                1px solid
+                rgba(255,255,255,0.05);
+        }
+
+
+        .stat small {
+
+            color: #9888a5;
+
+            display: block;
+
+            margin-bottom: 5px;
+        }
+
+
+        .stat strong {
+
+            font-size: 17px;
+
+            word-break: break-word;
+        }
+
+
+        /* =========================================
+           FEATURES
+        ========================================= */
+
+        .features-box {
+
+            margin-top: 25px;
+
+            padding: 22px;
+
+            border-radius: 18px;
+
+            background:
+                rgba(0,0,0,0.18);
+        }
+
+
+        .features-box h3 {
+
+            margin-bottom: 15px;
+
+            color: #e09cff;
+        }
+
+
+        #featuresList {
+
+            list-style: none;
+        }
+
+
+        #featuresList li {
+
+            padding: 9px 0;
+
+            color: #d6cbdc;
+
+            line-height: 1.5;
+        }
+
+
+        #featuresList li::before {
+
+            content: "✦";
+
+            color: #c52cff;
+
+            margin-right: 10px;
+        }
+
+
+        /* =========================================
+           AI REVIEW
+        ========================================= */
+
+        .review-box {
+
+            margin-top: 25px;
+
+            padding: 22px;
+
+            border-radius: 18px;
+
+            background:
+                rgba(0,0,0,0.18);
+        }
+
+
+        .review-box h3 {
+
+            margin-bottom: 15px;
+
+            color: #e09cff;
+        }
+
+
+        .review-box p {
+
+            color: #d5cbdc;
+
+            line-height: 1.8;
+        }
+
+
+        /* =========================================
+           ERROR
+        ========================================= */
+
+        .error-box {
+
+            padding: 30px;
+
+            border-radius: 18px;
+
+            background:
+                rgba(255,50,50,0.1);
+
+            border:
+                1px solid
+                rgba(255,70,70,0.3);
+
+            color: #ff9a9a;
+        }
+
+
+        .error-box h2 {
+
+            margin-bottom: 10px;
+        }
+
+
+        .error-box p {
+
+            line-height: 1.6;
+        }
+
+
+        /* =========================================
+           FOOTER
+        ========================================= */
+
+        footer {
+
+            text-align: center;
+
+            padding:
+                50px 0 30px;
+
+            color: #75677f;
+
+            font-size: 14px;
+        }
+
+
+        /* =========================================
+           RESPONSIVE
+        ========================================= */
+
+        @media (max-width: 800px) {
+
+            .trend-grid {
+
+                grid-template-columns:
+                    1fr;
+            }
+
+
+            .result-card {
+
+                grid-template-columns:
+                    1fr;
+            }
+
+
+            .cover {
+
+                height: 400px;
+            }
+
+
+            .search-box {
+
+                flex-direction:
+                    column;
+            }
+
+
+            #searchButton {
+
+                height: 55px;
+
+                width: 100%;
+            }
+
+
+            .stats {
+
+                grid-template-columns:
+                    1fr;
+            }
+
+
+            .hero {
+
+                padding-top: 45px;
+            }
+
+
+            .nav-badge {
+
+                display: none;
+            }
+
+
+            .result-info h2 {
+
+                font-size: 28px;
+            }
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<div class="container">
+
+
+    <!-- =========================================
+         NAVBAR
+    ========================================== -->
+
+    <nav>
+
+        <div class="logo">
+
+            🎮 Game<span>Scope</span> AI
+
+        </div>
+
+
+        <div class="nav-badge">
+
+            ✨ AI GAME ANALYZER
+
+        </div>
+
+    </nav>
+
+
+
+    <!-- =========================================
+         HERO
+    ========================================== -->
+
+    <section class="hero">
+
+        <div class="tag">
+
+            ✨ AI POWERED GAME REVIEWS
+
+        </div>
+
+
+        <h1>
+
+            Discover Your Next
+
+            <span class="gradient-text">
+                Game.
+            </span>
+
+        </h1>
+
+
+        <p>
+
+            Search any game and explore its
+            real game cover, rating, genre,
+            developer, release date, features
+            and AI-generated review.
+
+        </p>
+
+
+
+        <!-- =====================================
+             SEARCH
+        ====================================== -->
+
+        <div class="search-box">
+
+            <input
+                type="text"
+                id="gameInput"
+                placeholder="Search a game... e.g. Minecraft, GTA V, Free Fire"
+                autocomplete="off"
+            >
+
+
+            <button
+                type="button"
+                id="searchButton"
+                class="search-btn"
+                onclick="askAI()"
+            >
+
+                🔍 Search
+
+            </button>
+
+        </div>
+<div id="resultContainer"></div>
+
+<script src="script.js"></script>
+    </section>
+
+
+
+    <!-- =========================================
+         TRENDING
+    ========================================== -->
+
+    <section>
+
+        <div class="section-title">
+
+            <h2>
+                🔥 Trending Picks
+            </h2>
+
+
+            <span>
+                Popular right now
+            </span>
+
+        </div>
+
+
+
+        <div class="trend-grid">
+
+
+            <div
+                class="trend-card"
+                onclick="searchTrending('Free Fire')"
+            >
+
+                <div class="trend-icon">
+                    🔥
+                </div>
+
+                <small>
+                    Most Reviewed
+                </small>
+
+                <strong>
+                    Free Fire
+                </strong>
+
+            </div>
+
+
+
+            <div
+                class="trend-card"
+                onclick="searchTrending('Minecraft')"
+            >
+
+                <div class="trend-icon">
+                    ⛏️
+                </div>
+
+                <small>
+                    Popular
+                </small>
+
+                <strong>
+                    Minecraft
+                </strong>
+
+            </div>
+
+
+
+            <div
+                class="trend-card"
+                onclick="searchTrending('Grand Theft Auto V')"
+            >
+
+                <div class="trend-icon">
+                    ⭐
+                </div>
+
+                <small>
+                    Top Rated
+                </small>
+
+                <strong>
+                    GTA V
+                </strong>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+
+    <!-- =========================================
+         RESULT
+    ========================================== -->
+
+    <section id="resultContainer">
+
+
+        <!-- Initial welcome message -->
+
+        <div class="welcome">
+
+            <h2>
+                🎮 Search for a Game
+            </h2>
+
+
+            <p>
+
+                Enter a game name above and click
+                <strong>Search</strong> to generate
+                its game information and AI review.
+
+            </p>
+
+        </div>
+
+
+    </section>
+
+
+
+    <!-- =========================================
+         FOOTER
+    ========================================== -->
+
+    <footer>
+
+        © 2026 GameScope AI
+        · AI Powered Game Reviews
+
+    </footer>
+
+
+</div>
+
+
+
+<!-- =========================================
+     JAVASCRIPT
+========================================== -->
+
+<script src="script.js"></script>
+
+
+<!-- =========================================
+     TRENDING SEARCH FUNCTION
+========================================== -->
+
+<script>
+
+function searchTrending(gameName) {
+
+    const input =
+        document.getElementById("gameInput");
+
+    if (input) {
+
+        input.value = gameName;
+
+        askAI();
+    }
+}
+
+</script>
+
+
+</body>
+
+</html>
