@@ -1,9 +1,17 @@
-console.log("✅ script.js loaded");
+console.log(
+    "✅ Final Game Review script.js loaded"
+);
+
+// =====================================================
+// MAIN SEARCH
+// =====================================================
 
 async function askAI() {
 
     const input =
-        document.getElementById("gameInput");
+        document.getElementById(
+            "gameInput"
+        );
 
     const btn =
         document.getElementById(
@@ -34,13 +42,21 @@ async function askAI() {
     if (!game) {
 
         container.innerHTML = `
+
             <div class="error-box">
+
                 ❌ Please enter a game name.
+
             </div>
+
         `;
 
         return;
     }
+
+    // =================================================
+    // LOADING
+    // =================================================
 
     btn.disabled = true;
 
@@ -48,20 +64,28 @@ async function askAI() {
         "🔄 Searching...";
 
     container.innerHTML = `
+
         <div class="welcome">
+
             <h2>
                 🔍 Searching for
-                ${escapeHtml(game)}...
+                ${escapeHtml(game)}
             </h2>
 
             <p>
-                Getting game information
-                and generating AI review...
+                Searching IGDB and Google Play
+                and generating your AI review...
             </p>
+
         </div>
+
     `;
 
     try {
+
+        // =================================================
+        // API
+        // =================================================
 
         const response =
             await fetch(
@@ -74,17 +98,29 @@ async function askAI() {
                             "application/json"
                     },
 
-                    body: JSON.stringify({
-                        game
-                    })
+                    body:
+                        JSON.stringify({
+                            game
+                        })
                 }
             );
 
-        const data =
-            await response.json();
+        let data;
+
+        try {
+
+            data =
+                await response.json();
+
+        } catch {
+
+            throw new Error(
+                "Server returned an invalid response."
+            );
+        }
 
         console.log(
-            "📦 Server response:",
+            "📦 SERVER RESPONSE:",
             data
         );
 
@@ -99,15 +135,19 @@ async function askAI() {
             );
         }
 
+        // =================================================
+        // DATA
+        // =================================================
+
         const g =
             data.game || {};
 
         const ai =
             data.ai || {};
 
-        // ========================================
-        // DATA
-        // ========================================
+        // =================================================
+        // BASIC
+        // =================================================
 
         const title =
             g.title ||
@@ -115,39 +155,112 @@ async function askAI() {
 
         const image =
             g.image ||
-            ai.image ||
+            g.googlePlay?.icon ||
             "";
 
         const rating =
-            g.rating ??
-            "N/A";
+            g.rating ||
+            "Not publicly available";
 
         const reviews =
-            g.reviews ??
-            "Not available";
-
-        // ========================================
-        // DOWNLOAD TEXT
-        // ========================================
+            g.reviews ||
+            "Not publicly available";
 
         const downloads =
-            "More than 50M+";
+            g.downloads ||
+            "Not publicly available";
 
         const genre =
             g.genre ||
-            "Unknown";
+            "Not available";
 
         const developer =
             g.developer ||
-            "Unknown";
+            "Not available";
+
+        const publisher =
+            g.publisher ||
+            "Not available";
 
         const release =
             g.release ||
-            "Unknown";
+            "Not available";
 
-        const review =
-            ai.review ||
-            "No AI review available.";
+        const summary =
+            g.summary ||
+            "No description available.";
+
+        // =================================================
+        // GOOGLE PLAY
+        // =================================================
+
+        const playAvailable =
+            g.googlePlayAvailable === true;
+
+        const play =
+            g.googlePlay ||
+            {};
+
+        const playRating =
+            g.playRating ||
+            "Not publicly available";
+
+        const playReviews =
+            g.playReviews ||
+            "Not publicly available";
+
+        const playRatings =
+            g.playRatings;
+
+        // =================================================
+        // ARRAYS
+        // =================================================
+
+        const platforms =
+            Array.isArray(
+                g.platforms
+            )
+                ? g.platforms
+                : [];
+
+        const gameModes =
+            Array.isArray(
+                g.gameModes
+            )
+                ? g.gameModes
+                : [];
+
+        const themes =
+            Array.isArray(
+                g.themes
+            )
+                ? g.themes
+                : [];
+
+        const perspectives =
+            Array.isArray(
+                g.perspectives
+            )
+                ? g.perspectives
+                : [];
+
+        const keywords =
+            Array.isArray(
+                g.keywords
+            )
+                ? g.keywords
+                : [];
+
+        const screenshots =
+            Array.isArray(
+                play.screenshots
+            )
+                ? play.screenshots
+                : [];
+
+        // =================================================
+        // AI FEATURES
+        // =================================================
 
         let features =
             Array.isArray(
@@ -157,7 +270,9 @@ async function askAI() {
                 : [];
 
         features =
-            features.slice(0, 5);
+            features
+                .filter(Boolean)
+                .slice(0, 5);
 
         while (
             features.length < 5
@@ -168,44 +283,549 @@ async function askAI() {
             );
         }
 
-        // ========================================
-        // IMAGE
-        // ========================================
+        const review =
+            ai.review ||
+            "AI review unavailable.";
+
+        // =================================================
+        // IMAGE HTML
+        // =================================================
 
         let imageHTML = "";
 
         if (image) {
 
             imageHTML = `
+
                 <div class="cover">
 
                     <img
                         src="${escapeHtml(image)}"
-                        alt="${escapeHtml(title)} cover"
+                        alt="${escapeHtml(title)}"
+                        loading="lazy"
                         onerror="handleImageError(this)"
                     >
 
                 </div>
+
             `;
 
         } else {
 
             imageHTML = `
+
                 <div class="cover missing">
 
                     <div class="img-missing">
-                        🎮 Game cover unavailable
+
+                        🎮
+
+                        <br>
+
+                        Game cover unavailable
+
                     </div>
 
                 </div>
+
             `;
         }
 
-        // ========================================
-        // RESULT CARD
-        // ========================================
+        // =================================================
+        // GOOGLE PLAY HTML
+        // =================================================
 
-        let html = `
+        let googlePlayHTML = "";
+
+        if (playAvailable) {
+
+            googlePlayHTML = `
+
+                <div class="features-box">
+
+                    <h3>
+                        📱 Google Play Information
+                    </h3>
+
+                    <p>
+                        <strong>
+                            Play Rating:
+                        </strong>
+
+                        ${escapeHtml(
+                            playRating
+                        )}
+                    </p>
+
+                    <p>
+                        <strong>
+                            Play Reviews:
+                        </strong>
+
+                        ${escapeHtml(
+                            playReviews
+                        )}
+                    </p>
+
+                    <p>
+                        <strong>
+                            Play Ratings:
+                        </strong>
+
+                        ${escapeHtml(
+                            playRatings ??
+                            "Not publicly available"
+                        )}
+                    </p>
+
+                    ${
+                        play.installs
+                            ? `
+
+                                <p>
+
+                                    <strong>
+                                        Downloads:
+                                    </strong>
+
+                                    ${escapeHtml(
+                                        play.installs
+                                    )}
+
+                                </p>
+
+                            `
+                            : ""
+                    }
+
+                    ${
+                        play.developer
+                            ? `
+
+                                <p>
+
+                                    <strong>
+                                        Play Developer:
+                                    </strong>
+
+                                    ${escapeHtml(
+                                        play.developer
+                                    )}
+
+                                </p>
+
+                            `
+                            : ""
+                    }
+
+                    ${
+                        play.version
+                            ? `
+
+                                <p>
+
+                                    <strong>
+                                        Version:
+                                    </strong>
+
+                                    ${escapeHtml(
+                                        play.version
+                                    )}
+
+                                </p>
+
+                            `
+                            : ""
+                    }
+
+                    ${
+                        play.updated
+                            ? `
+
+                                <p>
+
+                                    <strong>
+                                        Last Updated:
+                                    </strong>
+
+                                    ${escapeHtml(
+                                        play.updated
+                                    )}
+
+                                </p>
+
+                            `
+                            : ""
+                    }
+
+                    ${
+                        play.androidVersionText
+                            ? `
+
+                                <p>
+
+                                    <strong>
+                                        Android:
+                                    </strong>
+
+                                    ${escapeHtml(
+                                        play.androidVersionText
+                                    )}
+
+                                </p>
+
+                            `
+                            : ""
+                    }
+
+                    ${
+                        play.contentRating
+                            ? `
+
+                                <p>
+
+                                    <strong>
+                                        Content Rating:
+                                    </strong>
+
+                                    ${escapeHtml(
+                                        play.contentRating
+                                    )}
+
+                                </p>
+
+                            `
+                            : ""
+                    }
+
+                    ${
+                        play.free !== null &&
+                        play.free !== undefined
+                            ? `
+
+                                <p>
+
+                                    <strong>
+                                        Free:
+                                    </strong>
+
+                                    ${play.free
+                                        ? "Yes"
+                                        : "No"}
+
+                                </p>
+
+                            `
+                            : ""
+                    }
+
+                    ${
+                        play.offersIAP !== null &&
+                        play.offersIAP !== undefined
+                            ? `
+
+                                <p>
+
+                                    <strong>
+                                        In-App Purchases:
+                                    </strong>
+
+                                    ${play.offersIAP
+                                        ? "Yes"
+                                        : "No"}
+
+                                </p>
+
+                            `
+                            : ""
+                    }
+
+                    ${
+                        play.adSupported !== null &&
+                        play.adSupported !== undefined
+                            ? `
+
+                                <p>
+
+                                    <strong>
+                                        Ads:
+                                    </strong>
+
+                                    ${play.adSupported
+                                        ? "Yes"
+                                        : "No"}
+
+                                </p>
+
+                            `
+                            : ""
+                    }
+
+                    ${
+                        play.url
+                            ? `
+
+                                <p>
+
+                                    <a
+                                        href="${escapeHtml(
+                                            play.url
+                                        )}"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                    >
+
+                                        Open Google Play
+
+                                    </a>
+
+                                </p>
+
+                            `
+                            : ""
+                    }
+
+                </div>
+
+            `;
+
+        } else {
+
+            googlePlayHTML = `
+
+                <div class="features-box">
+
+                    <h3>
+                        📱 Google Play Information
+                    </h3>
+
+                    <p>
+                        Google Play information
+                        was not confidently matched
+                        for this game.
+                    </p>
+
+                </div>
+
+            `;
+        }
+
+        // =================================================
+        // FEATURES HTML
+        // =================================================
+
+        let featuresHTML = "";
+
+        features.forEach(
+            feature => {
+
+                featuresHTML += `
+
+                    <li>
+                        ${escapeHtml(
+                            feature
+                        )}
+                    </li>
+
+                `;
+            }
+        );
+
+        // =================================================
+        // PLATFORMS
+        // =================================================
+
+        let platformsHTML = "";
+
+        if (
+            platforms.length > 0
+        ) {
+
+            platformsHTML = `
+
+                <div class="features-box">
+
+                    <h3>
+                        🎮 Platforms
+                    </h3>
+
+                    <p>
+                        ${escapeHtml(
+                            platforms.join(", ")
+                        )}
+                    </p>
+
+                </div>
+
+            `;
+        }
+
+        // =================================================
+        // GAME MODES
+        // =================================================
+
+        let modesHTML = "";
+
+        if (
+            gameModes.length > 0
+        ) {
+
+            modesHTML = `
+
+                <div class="features-box">
+
+                    <h3>
+                        👥 Game Modes
+                    </h3>
+
+                    <p>
+                        ${escapeHtml(
+                            gameModes.join(", ")
+                        )}
+                    </p>
+
+                </div>
+
+            `;
+        }
+
+        // =================================================
+        // THEMES
+        // =================================================
+
+        let themesHTML = "";
+
+        if (
+            themes.length > 0
+        ) {
+
+            themesHTML = `
+
+                <div class="features-box">
+
+                    <h3>
+                        🎨 Themes
+                    </h3>
+
+                    <p>
+                        ${escapeHtml(
+                            themes.join(", ")
+                        )}
+                    </p>
+
+                </div>
+
+            `;
+        }
+
+        // =================================================
+        // PERSPECTIVES
+        // =================================================
+
+        let perspectivesHTML = "";
+
+        if (
+            perspectives.length > 0
+        ) {
+
+            perspectivesHTML = `
+
+                <div class="features-box">
+
+                    <h3>
+                        👁️ Perspective
+                    </h3>
+
+                    <p>
+                        ${escapeHtml(
+                            perspectives.join(", ")
+                        )}
+                    </p>
+
+                </div>
+
+            `;
+        }
+
+        // =================================================
+        // KEYWORDS
+        // =================================================
+
+        let keywordsHTML = "";
+
+        if (
+            keywords.length > 0
+        ) {
+
+            keywordsHTML = `
+
+                <div class="features-box">
+
+                    <h3>
+                        🏷️ Keywords
+                    </h3>
+
+                    <p>
+                        ${escapeHtml(
+                            keywords.join(", ")
+                        )}
+                    </p>
+
+                </div>
+
+            `;
+        }
+
+        // =================================================
+        // SCREENSHOTS
+        // =================================================
+
+        let screenshotsHTML = "";
+
+        if (
+            screenshots.length > 0
+        ) {
+
+            screenshotsHTML = `
+
+                <div class="features-box">
+
+                    <h3>
+                        📸 Screenshots
+                    </h3>
+
+                    <div class="screenshots">
+
+                        ${screenshots
+                            .slice(0, 6)
+                            .map(
+                                screenshot => `
+
+                                    <img
+                                        src="${escapeHtml(
+                                            screenshot
+                                        )}"
+                                        alt="Game screenshot"
+                                        loading="lazy"
+                                        onerror="this.style.display='none'"
+                                    >
+
+                                `
+                            )
+                            .join("")}
+
+                    </div>
+
+                </div>
+
+            `;
+        }
+
+        // =================================================
+        // FINAL HTML
+        // =================================================
+
+        const html = `
 
             <div class="result-card">
 
@@ -216,6 +836,10 @@ async function askAI() {
                     <h2>
                         ${escapeHtml(title)}
                     </h2>
+
+                    <p class="game-summary">
+                        ${escapeHtml(summary)}
+                    </p>
 
                     <div class="stats">
 
@@ -236,7 +860,7 @@ async function askAI() {
                         <div class="stat">
 
                             <small>
-                                📝 Reviews
+                                📝 IGDB Ratings
                             </small>
 
                             <strong>
@@ -264,7 +888,7 @@ async function askAI() {
                         <div class="stat">
 
                             <small>
-                                🎮 Genre
+                                🎭 Genre
                             </small>
 
                             <strong>
@@ -303,7 +927,23 @@ async function askAI() {
 
                         </div>
 
+                        <div class="stat">
+
+                            <small>
+                                🏢 Publisher
+                            </small>
+
+                            <strong>
+                                ${escapeHtml(
+                                    publisher
+                                )}
+                            </strong>
+
+                        </div>
+
                     </div>
+
+                    ${googlePlayHTML}
 
                     <div class="features-box">
 
@@ -312,26 +952,24 @@ async function askAI() {
                         </h3>
 
                         <ul>
-        `;
 
-        features.forEach(
-            feature => {
-
-                html += `
-                    <li>
-                        ${escapeHtml(
-                            feature
-                        )}
-                    </li>
-                `;
-            }
-        );
-
-        html += `
+                            ${featuresHTML}
 
                         </ul>
 
                     </div>
+
+                    ${platformsHTML}
+
+                    ${modesHTML}
+
+                    ${themesHTML}
+
+                    ${perspectivesHTML}
+
+                    ${keywordsHTML}
+
+                    ${screenshotsHTML}
 
                     <div class="review-box">
 
@@ -350,10 +988,20 @@ async function askAI() {
                 </div>
 
             </div>
+
         `;
 
         container.innerHTML =
             html;
+
+        // =================================================
+        // DEBUG
+        // =================================================
+
+        console.log(
+            "🎮 Game:",
+            title
+        );
 
         console.log(
             "⭐ Rating:",
@@ -361,7 +1009,7 @@ async function askAI() {
         );
 
         console.log(
-            "📝 Reviews:",
+            "📝 IGDB Ratings:",
             reviews
         );
 
@@ -371,7 +1019,7 @@ async function askAI() {
         );
 
         console.log(
-            "🎮 Genre:",
+            "🎭 Genre:",
             genre
         );
 
@@ -385,6 +1033,25 @@ async function askAI() {
             release
         );
 
+        console.log(
+            "📱 Google Play:",
+            playAvailable
+        );
+
+        console.log(
+            "💬 Play Reviews:",
+            playReviews
+        );
+
+        console.log(
+            "🤖 AI Review:",
+            review
+        );
+
+        // =================================================
+        // SCROLL
+        // =================================================
+
         container.scrollIntoView({
             behavior: "smooth",
             block: "start"
@@ -393,7 +1060,7 @@ async function askAI() {
     } catch (error) {
 
         console.error(
-            "❌ Frontend error:",
+            "❌ FRONTEND ERROR:",
             error
         );
 
@@ -411,7 +1078,14 @@ async function askAI() {
                     )}
                 </p>
 
+                <p>
+                    Open the browser console
+                    and terminal to see the
+                    detailed error.
+                </p>
+
             </div>
+
         `;
 
     } finally {
@@ -423,24 +1097,41 @@ async function askAI() {
     }
 }
 
-// ============================================
+// =====================================================
 // IMAGE ERROR
-// ============================================
+// =====================================================
 
 function handleImageError(img) {
 
+    if (!img) {
+        return;
+    }
+
     img.onerror = null;
 
-    img.parentElement.innerHTML = `
-        <div class="img-missing">
-            🎮 Game cover unavailable
-        </div>
-    `;
+    if (
+        img.parentElement
+    ) {
+
+        img.parentElement.innerHTML = `
+
+            <div class="img-missing">
+
+                🎮
+
+                <br>
+
+                Game cover unavailable
+
+            </div>
+
+        `;
+    }
 }
 
-// ============================================
+// =====================================================
 // ESCAPE HTML
-// ============================================
+// =====================================================
 
 function escapeHtml(text) {
 
@@ -448,35 +1139,41 @@ function escapeHtml(text) {
         text === null ||
         text === undefined
     ) {
+
         return "";
     }
 
     return String(text)
+
         .replace(
             /&/g,
             "&amp;"
         )
+
         .replace(
             /</g,
             "&lt;"
         )
+
         .replace(
             />/g,
             "&gt;"
         )
+
         .replace(
             /"/g,
             "&quot;"
         )
+
         .replace(
             /'/g,
             "&#039;"
         );
 }
 
-// ============================================
+// =====================================================
 // ENTER KEY
-// ============================================
+// =====================================================
 
 document.addEventListener(
     "DOMContentLoaded",
@@ -488,6 +1185,11 @@ document.addEventListener(
             );
 
         if (!input) {
+
+            console.error(
+                "❌ gameInput not found."
+            );
+
             return;
         }
 
@@ -505,6 +1207,10 @@ document.addEventListener(
                     askAI();
                 }
             }
+        );
+
+        console.log(
+            "✅ Search input ready."
         );
     }
 );

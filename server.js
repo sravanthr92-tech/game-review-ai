@@ -3,6 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
+import gplay from "@mradex77/google-play-scraper";
 
 dotenv.config();
 
@@ -12,9 +13,9 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ==========================================
-// CHECK ENVIRONMENT VARIABLES
-// ==========================================
+// =====================================================
+// ENVIRONMENT
+// =====================================================
 
 const requiredKeys = [
     "GEMINI_API_KEY",
@@ -29,25 +30,182 @@ for (const key of requiredKeys) {
     }
 }
 
-// ==========================================
+// =====================================================
 // MIDDLEWARE
-// ==========================================
+// =====================================================
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: "1mb" }));
 app.use(express.static(__dirname));
 
-// ==========================================
-// HOME PAGE
-// ==========================================
+// =====================================================
+// HOME
+// =====================================================
 
 app.get("/", (req, res) => {
     res.sendFile(path.join(__dirname, "index.html"));
 });
 
-// ==========================================
-// TWITCH ACCESS TOKEN
-// ==========================================
+// =====================================================
+// HELPERS
+// =====================================================
+
+function normalizeGameName(name) {
+    return String(name || "")
+        .toLowerCase()
+        .replace(/[™®©]/g, "")
+        .replace(/[^a-z0-9]+/g, " ")
+        .trim()
+        .replace(/\s+/g, " ");
+}
+
+function similarityScore(searchName, resultName) {
+
+    const a = normalizeGameName(searchName);
+    const b = normalizeGameName(resultName);
+
+    if (!a || !b) {
+        return 0;
+    }
+
+    if (a === b) {
+        return 100;
+    }
+
+    if (
+        a.includes(b) ||
+        b.includes(a)
+    ) {
+        return 80;
+    }
+
+    const aWords = new Set(a.split(" "));
+    const bWords = new Set(b.split(" "));
+
+    let common = 0;
+
+    for (const word of aWords) {
+        if (bWords.has(word)) {
+            common++;
+        }
+    }
+
+    const total =
+        Math.max(
+            aWords.size,
+            bWords.size
+        );
+
+    return total
+        ? Math.round(
+            (common / total) * 60
+        )
+        : 0;
+}
+
+function createIGDBImage(imageId) {
+
+    if (!imageId) {
+        return "";
+    }
+
+    return (
+        "https://images.igdb.com/igdb/image/upload/" +
+        "t_cover_big/" +
+        imageId +
+        ".jpg"
+    );
+}
+
+function formatNumber(value) {
+
+    if (
+        value === null ||
+        value === undefined ||
+        value === ""
+    ) {
+        return "Not publicly available";
+    }
+
+    const number = Number(value);
+
+    if (!Number.isFinite(number)) {
+        return String(value);
+    }
+
+    if (number >= 1000000000) {
+        return (
+            (number / 1000000000)
+                .toFixed(1)
+                .replace(".0", "") +
+            "B+"
+        );
+    }
+
+    if (number >= 1000000) {
+        return (
+            (number / 1000000)
+                .toFixed(1)
+                .replace(".0", "") +
+            "M+"
+        );
+    }
+
+    if (number >= 1000) {
+        return (
+            (number / 1000)
+                .toFixed(1)
+                .replace(".0", "") +
+            "K+"
+        );
+    }
+
+    return number.toLocaleString();
+}
+
+function formatDate(unixSeconds) {
+
+    if (
+        typeof unixSeconds !== "number"
+    ) {
+        return "Not available";
+    }
+
+    const date =
+        new Date(unixSeconds * 1000);
+
+    if (Number.isNaN(date.getTime())) {
+        return "Not available";
+    }
+
+    return date
+        .toISOString()
+        .split("T")[0];
+}
+
+function formatTimestamp(timestamp) {
+
+    if (
+        typeof timestamp !== "number"
+    ) {
+        return "Not available";
+    }
+
+    const date =
+        new Date(timestamp);
+
+    if (Number.isNaN(date.getTime())) {
+        return "Not available";
+    }
+
+    return date
+        .toISOString()
+        .split("T")[0];
+}
+
+// =====================================================
+// TWITCH / IGDB TOKEN
+// =====================================================
 
 let twitchAccessToken = null;
 let tokenExpiresAt = 0;
@@ -61,9 +219,12 @@ async function getTwitchAccessToken() {
         return twitchAccessToken;
     }
 
-    console.log("🔐 Getting Twitch access token...");
+    console.log(
+        "🔐 Getting Twitch access token..."
+    );
 
-    const params = new URLSearchParams();
+    const params =
+        new URLSearchParams();
 
     params.append(
         "client_id",
@@ -80,32 +241,30 @@ async function getTwitchAccessToken() {
         "client_credentials"
     );
 
-    const response = await fetch(
-        "https://id.twitch.tv/oauth2/token",
-        {
-            method: "POST",
+    const response =
+        await fetch(
+            "https://id.twitch.tv/oauth2/token",
+            {
+                method: "POST",
 
-            headers: {
-                "Content-Type":
-                    "application/x-www-form-urlencoded"
-            },
+                headers: {
+                    "Content-Type":
+                        "application/x-www-form-urlencoded"
+                },
 
-            body: params.toString()
-        }
-    );
+                body:
+                    params.toString()
+            }
+        );
 
-    const data = await response.json();
+    const data =
+        await response.json();
 
     if (!response.ok) {
 
-        console.error(
-            "❌ Twitch OAuth Error:",
-            JSON.stringify(data, null, 2)
-        );
-
         throw new Error(
             data.message ||
-            "Unable to get Twitch access token."
+            "Unable to obtain Twitch access token."
         );
     }
 
@@ -124,86 +283,80 @@ async function getTwitchAccessToken() {
     return twitchAccessToken;
 }
 
-// ==========================================
-// NORMALIZE GAME NAME
-// ==========================================
-
-function normalizeGameName(name) {
-
-    return String(name)
-        .toLowerCase()
-        .replace(/[™®©]/g, "")
-        .replace(/[^a-z0-9]+/g, " ")
-        .trim()
-        .replace(/\s+/g, " ");
-}
-
-// ==========================================
-// CREATE IGDB IMAGE URL
-// ==========================================
-
-function createIGDBImage(imageId) {
-
-    if (!imageId) {
-        return "";
-    }
-
-    return (
-        "https://images.igdb.com/igdb/image/upload/" +
-        `t_cover_big/${imageId}.jpg`
-    );
-}
-
-// ==========================================
-// SEARCH IGDB
-// ==========================================
+// =====================================================
+// IGDB SEARCH
+// =====================================================
 
 async function searchIGDB(gameName) {
 
     const accessToken =
         await getTwitchAccessToken();
 
-    console.log(
-        "🎮 Searching IGDB for:",
-        gameName
-    );
+    const safeName =
+        String(gameName)
+            .replace(/\\/g, "\\\\")
+            .replace(/"/g, '\\"');
 
     const query = `
-        search "${gameName}";
+        search "${safeName}";
         fields
             id,
             name,
+            slug,
+            summary,
+            storyline,
             cover.image_id,
             genres.name,
             involved_companies.company.name,
             involved_companies.developer,
+            involved_companies.publisher,
             first_release_date,
             rating,
             rating_count,
-            summary,
+            aggregated_rating,
+            aggregated_rating_count,
+            total_rating,
+            total_rating_count,
+            platforms.name,
+            platforms.abbreviation,
+            game_modes.name,
+            themes.name,
+            player_perspectives.name,
+            keywords.name,
+            franchise.name,
+            franchises.name,
+            collection.name,
+            websites.url,
+            websites.category,
             url;
-        limit 10;
+        limit 15;
     `;
 
-    const response = await fetch(
-        "https://api.igdb.com/v4/games",
-        {
-            method: "POST",
-
-            headers: {
-                "Client-ID":
-                    process.env.TWITCH_CLIENT_ID,
-
-                "Authorization":
-                    `Bearer ${accessToken}`,
-
-                "Content-Type":
-                    "text/plain"
-            },
-
-            body: query
-        }
+    console.log(
+        "🎮 Searching IGDB:",
+        gameName
     );
+
+    const response =
+        await fetch(
+            "https://api.igdb.com/v4/games",
+            {
+                method: "POST",
+
+                headers: {
+                    "Client-ID":
+                        process.env.TWITCH_CLIENT_ID,
+
+                    "Authorization":
+                        `Bearer ${accessToken}`,
+
+                    "Content-Type":
+                        "text/plain"
+                },
+
+                body: query
+            }
+        );
 
     const data =
         await response.json();
@@ -211,7 +364,7 @@ async function searchIGDB(gameName) {
     if (!response.ok) {
 
         console.error(
-            "❌ IGDB Error:",
+            "❌ IGDB error:",
             JSON.stringify(
                 data,
                 null,
@@ -229,235 +382,718 @@ async function searchIGDB(gameName) {
         !Array.isArray(data) ||
         data.length === 0
     ) {
-
-        console.log(
-            "⚠️ No IGDB results for:",
-            gameName
-        );
-
         return null;
     }
 
-    // ======================================
-    // FIND BEST MATCH
-    // ======================================
+    let bestGame = data[0];
+    let bestScore = 0;
 
-    const searchName =
-        normalizeGameName(gameName);
+    for (const item of data) {
 
-    let game =
-        data.find(item =>
-            normalizeGameName(item.name) ===
-            searchName
-        );
+        const score =
+            similarityScore(
+                gameName,
+                item.name
+            );
 
-    if (!game) {
-
-        game =
-            data.find(item => {
-
-                const title =
-                    normalizeGameName(
-                        item.name
-                    );
-
-                return (
-                    title.startsWith(searchName) ||
-                    searchName.startsWith(title)
-                );
-            });
-    }
-
-    if (!game) {
-        game = data[0];
-    }
-
-    console.log(
-        "🎯 Selected IGDB game:",
-        game.name
-    );
-
-    console.log(
-        "🆔 IGDB ID:",
-        game.id
-    );
-
-    console.log(
-        "🖼️ IGDB image ID:",
-        game.cover?.image_id || "NONE"
-    );
-
-    // ======================================
-    // IMAGE
-    // ======================================
-
-    const image =
-        createIGDBImage(
-            game.cover?.image_id
-        );
-
-    // ======================================
-    // GENRE
-    // ======================================
-
-    let genre = "Unknown";
-
-    if (
-        Array.isArray(game.genres) &&
-        game.genres.length > 0
-    ) {
-
-        genre =
-            game.genres
-                .map(g => g.name)
-                .filter(Boolean)
-                .join(", ");
-    }
-
-    // ======================================
-    // DEVELOPER
-    // ======================================
-
-    let developer = "Unknown";
-
-    if (
-        Array.isArray(
-            game.involved_companies
-        )
-    ) {
-
-        developer =
-            game.involved_companies
-                .filter(company =>
-                    company.developer !== false
-                )
-                .map(company =>
-                    company.company?.name
-                )
-                .filter(Boolean)
-                .join(", ");
-
-        if (!developer) {
-            developer = "Unknown";
+        if (score > bestScore) {
+            bestScore = score;
+            bestGame = item;
         }
     }
 
-    // ======================================
-    // RELEASE DATE
-    // ======================================
+    console.log(
+        "🎯 IGDB selected:",
+        bestGame.name,
+        "| match:",
+        bestScore
+    );
 
-    let release = "Unknown";
+    // =================================================
+    // IMAGE
+    // =================================================
 
-    if (
-        typeof game.first_release_date ===
-        "number"
-    ) {
+    const image =
+        createIGDBImage(
+            bestGame.cover?.image_id
+        );
 
-        const date =
-            new Date(
-                game.first_release_date * 1000
-            );
+    // =================================================
+    // GENRES
+    // =================================================
 
-        release =
-            date
-                .toISOString()
-                .split("T")[0];
-    }
+    const genres =
+        Array.isArray(bestGame.genres)
+            ? bestGame.genres
+                .map(x => x.name)
+                .filter(Boolean)
+            : [];
 
-    // ======================================
+    // =================================================
+    // DEVELOPER / PUBLISHER
+    // =================================================
+
+    const companies =
+        Array.isArray(
+            bestGame.involved_companies
+        )
+            ? bestGame.involved_companies
+            : [];
+
+    const developers =
+        companies
+            .filter(
+                x => x.developer === true
+            )
+            .map(
+                x => x.company?.name
+            )
+            .filter(Boolean);
+
+    const publishers =
+        companies
+            .filter(
+                x => x.publisher === true
+            )
+            .map(
+                x => x.company?.name
+            )
+            .filter(Boolean);
+
+    // =================================================
+    // PLATFORMS
+    // =================================================
+
+    const platforms =
+        Array.isArray(
+            bestGame.platforms
+        )
+            ? bestGame.platforms
+                .map(x => x.name)
+                .filter(Boolean)
+            : [];
+
+    // =================================================
+    // GAME MODES
+    // =================================================
+
+    const gameModes =
+        Array.isArray(
+            bestGame.game_modes
+        )
+            ? bestGame.game_modes
+                .map(x => x.name)
+                .filter(Boolean)
+            : [];
+
+    // =================================================
+    // THEMES
+    // =================================================
+
+    const themes =
+        Array.isArray(bestGame.themes)
+            ? bestGame.themes
+                .map(x => x.name)
+                .filter(Boolean)
+            : [];
+
+    // =================================================
+    // PERSPECTIVES
+    // =================================================
+
+    const perspectives =
+        Array.isArray(
+            bestGame.player_perspectives
+        )
+            ? bestGame.player_perspectives
+                .map(x => x.name)
+                .filter(Boolean)
+            : [];
+
+    // =================================================
+    // KEYWORDS
+    // =================================================
+
+    const keywords =
+        Array.isArray(
+            bestGame.keywords
+        )
+            ? bestGame.keywords
+                .map(x => x.name)
+                .filter(Boolean)
+                .slice(0, 20)
+            : [];
+
+    // =================================================
     // RATING
-    // ======================================
+    // =================================================
 
-    let rating = "N/A";
+    let rating =
+        "Not publicly available";
 
     if (
-        typeof game.rating ===
+        typeof bestGame.rating ===
         "number"
     ) {
 
         rating =
-            `${(
-                game.rating / 20
-            ).toFixed(1)} / 5`;
+            (
+                bestGame.rating / 20
+            ).toFixed(1) +
+            " / 5";
     }
 
-    // ======================================
-    // REVIEW COUNT
-    // ======================================
+    // =================================================
+    // REVIEW / RATING COUNT
+    // =================================================
 
-    let reviews = "N/A";
+    let reviews =
+        "Not publicly available";
 
     if (
-        typeof game.rating_count ===
+        typeof bestGame.rating_count ===
         "number"
     ) {
 
         reviews =
-            game.rating_count.toString();
+            formatNumber(
+                bestGame.rating_count
+            );
     }
 
-    // ======================================
-    // RETURN GAME DATA
-    // ======================================
+    // =================================================
+    // RELEASE
+    // =================================================
+
+    const release =
+        formatDate(
+            bestGame.first_release_date
+        );
+
+    // =================================================
+    // RETURN IGDB DATA
+    // =================================================
 
     return {
 
+        source: "IGDB",
+
         id:
-            game.id || "",
+            bestGame.id || "",
 
         title:
-            game.name || gameName,
+            bestGame.name ||
+            gameName,
+
+        slug:
+            bestGame.slug || "",
 
         image,
 
         image_id:
-            game.cover?.image_id || "",
-
-        genre,
-
-        developer,
-
-        release,
+            bestGame.cover?.image_id ||
+            "",
 
         rating,
 
         reviews,
 
+        genre:
+            genres.join(", ") ||
+            "Not available",
+
+        genres,
+
+        developer:
+            developers.join(", ") ||
+            "Not available",
+
+        developers,
+
+        publisher:
+            publishers.join(", ") ||
+            "Not available",
+
+        publishers,
+
+        release,
+
+        platforms,
+
+        gameModes,
+
+        themes,
+
+        perspectives,
+
+        keywords,
+
+        franchise:
+            bestGame.franchise?.name ||
+            "",
+
+        collection:
+            bestGame.collection?.name ||
+            "",
+
         summary:
-            game.summary || "",
+            bestGame.summary ||
+            "",
+
+        storyline:
+            bestGame.storyline ||
+            "",
+
+        websites:
+            Array.isArray(
+                bestGame.websites
+            )
+                ? bestGame.websites
+                : [],
 
         igdb_url:
-            game.url || ""
+            bestGame.url ||
+            ""
     };
 }
 
-// ==========================================
-// GEMINI AI REVIEW
-// ==========================================
+// =====================================================
+// GOOGLE PLAY SEARCH
+// =====================================================
 
-async function generateAIReview(gameInfo) {
+async function searchGooglePlay(
+    gameName,
+    igdbGame
+) {
+
+    console.log(
+        "📱 Searching Google Play:",
+        gameName
+    );
+
+    try {
+
+        const results =
+            await gplay.search({
+                term: gameName,
+                num: 10,
+                country: "us",
+                lang: "en"
+            });
+
+        if (
+            !Array.isArray(results) ||
+            results.length === 0
+        ) {
+
+            console.log(
+                "⚠️ No Google Play results."
+            );
+
+            return null;
+        }
+
+        // =============================================
+        // FIND BEST RESULT
+        // =============================================
+
+        let best = null;
+        let bestScore = 0;
+
+        for (
+            const result of results
+        ) {
+
+            const score =
+                similarityScore(
+                    gameName,
+                    result.title
+                );
+
+            // Strong preference for game-looking
+            // results when IGDB title matches.
+
+            if (
+                score > bestScore
+            ) {
+                bestScore = score;
+                best = result;
+            }
+        }
+
+        if (
+            !best ||
+            bestScore < 45
+        ) {
+
+            console.log(
+                "⚠️ Google Play match too weak."
+            );
+
+            return null;
+        }
+
+        console.log(
+            "🎯 Google Play selected:",
+            best.title,
+            "| match:",
+            bestScore,
+            "| app:",
+            best.appId
+        );
+
+        // =============================================
+        // GET FULL APP DETAILS
+        // =============================================
+
+        const details =
+            await gplay.app({
+                appId: best.appId,
+                country: "us",
+                lang: "en"
+            });
+
+        if (!details) {
+            return null;
+        }
+
+        return {
+
+            source:
+                "Google Play",
+
+            appId:
+                details.appId ||
+                best.appId ||
+                "",
+
+            title:
+                details.title ||
+                best.title ||
+                "",
+
+            installs:
+                details.installs ||
+                "Not publicly available",
+
+            minInstalls:
+                details.minInstalls ??
+                null,
+
+            score:
+                details.score ??
+                null,
+
+            scoreText:
+                details.scoreText ||
+                "Not publicly available",
+
+            ratings:
+                details.ratings ??
+                null,
+
+            reviews:
+                details.reviews ??
+                null,
+
+            genre:
+                details.genre ||
+                "",
+
+            categories:
+                Array.isArray(
+                    details.categories
+                )
+                    ? details.categories
+                        .map(x => x.name)
+                        .filter(Boolean)
+                    : [],
+
+            developer:
+                details.developer ||
+                "",
+
+            developerId:
+                details.developerId ||
+                "",
+
+            developerEmail:
+                details.developerEmail ||
+                "",
+
+            developerWebsite:
+                details.developerWebsite ||
+                "",
+
+            description:
+                details.description ||
+                "",
+
+            summary:
+                details.summary ||
+                "",
+
+            icon:
+                details.icon ||
+                "",
+
+            screenshots:
+                Array.isArray(
+                    details.screenshots
+                )
+                    ? details.screenshots
+                    : [],
+
+            contentRating:
+                details.contentRating ||
+                "",
+
+            androidVersion:
+                details.androidVersion ||
+                "",
+
+            androidVersionText:
+                details.androidVersionText ||
+                "",
+
+            version:
+                details.version ||
+                "",
+
+            updated:
+                formatTimestamp(
+                    details.updated
+                ),
+
+            price:
+                details.price ??
+                null,
+
+            priceText:
+                details.priceText ||
+                "",
+
+            free:
+                details.free ??
+                null,
+
+            currency:
+                details.currency ||
+                "",
+
+            offersIAP:
+                details.offersIAP ??
+                null,
+
+            adSupported:
+                details.adSupported ??
+                null,
+
+            available:
+                details.available ??
+                null,
+
+            url:
+                details.url ||
+                ""
+        };
+
+    } catch (error) {
+
+        console.warn(
+            "⚠️ Google Play lookup failed:",
+            error.message
+        );
+
+        return null;
+    }
+}
+
+// =====================================================
+// MERGE DATA
+// =====================================================
+
+function mergeGameData(
+    igdb,
+    play
+) {
+
+    const playAvailable =
+        !!play;
+
+    // ================================================
+    // DOWNLOADS
+    // ================================================
+
+    let downloads =
+        "Not publicly available";
+
+    if (
+        playAvailable &&
+        play.installs
+    ) {
+
+        downloads =
+            play.installs;
+    }
+
+    // ================================================
+    // PLAY REVIEWS
+    // ================================================
+
+    let playReviewCount =
+        "Not publicly available";
+
+    if (
+        playAvailable &&
+        typeof play.reviews ===
+        "number"
+    ) {
+
+        playReviewCount =
+            formatNumber(
+                play.reviews
+            );
+    }
+
+    // ================================================
+    // PLAY RATINGS
+    // ================================================
+
+    let playRating =
+        "Not publicly available";
+
+    if (
+        playAvailable &&
+        play.scoreText
+    ) {
+
+        playRating =
+            `${play.scoreText} / 5`;
+    }
+
+    // ================================================
+    // MAIN DATA
+    // ================================================
+
+    return {
+
+        ...igdb,
+
+        // --------------------------------------------
+        // Google Play
+        // --------------------------------------------
+
+        googlePlayAvailable:
+            playAvailable,
+
+        googlePlay:
+
+            play || null,
+
+        googlePlayTitle:
+            play?.title ||
+            "",
+
+        googlePlayUrl:
+            play?.url ||
+            "",
+
+        // --------------------------------------------
+        // Downloads
+        // --------------------------------------------
+
+        downloads,
+
+        downloadSource:
+            playAvailable
+                ? "Google Play"
+                : "Not publicly available",
+
+        // --------------------------------------------
+        // Reviews
+        // --------------------------------------------
+
+        playReviews:
+            playReviewCount,
+
+        playRatings:
+            play?.ratings ??
+            null,
+
+        playRating:
+
+            playRating,
+
+        // --------------------------------------------
+        // Better developer
+        // --------------------------------------------
+
+        finalDeveloper:
+            play?.developer ||
+            igdb.developer ||
+            "Not available",
+
+        // --------------------------------------------
+        // Better genre
+        // --------------------------------------------
+
+        finalGenre:
+            igdb.genre !==
+            "Not available"
+                ? igdb.genre
+                : (
+                    play?.genre ||
+                    "Not available"
+                ),
+
+        // --------------------------------------------
+        // Description
+        // --------------------------------------------
+
+        finalDescription:
+            igdb.summary ||
+            play?.description ||
+            "Not available"
+    };
+}
+
+// =====================================================
+// GEMINI
+// =====================================================
+
+async function generateAIReview(
+    gameInfo
+) {
+
+    const model =
+        process.env.GEMINI_MODEL ||
+        "gemini-3.5-flash-lite";
 
     const prompt = `
 You are an expert video game reviewer.
 
-Use ONLY the factual information provided
-from IGDB.
+The data below comes from external game-data sources.
+
+Your job is ONLY to create:
+1. Five short game features.
+2. A useful review under 120 words.
+
+IMPORTANT:
+- Do NOT invent download numbers.
+- Do NOT invent review counts.
+- Do NOT invent ratings.
+- Do NOT invent release dates.
+- Do NOT change the game title.
+- Do NOT create URLs.
+- Use the supplied factual data.
+- If something is unavailable, do not guess it.
 
 Return ONLY valid JSON.
 
-Do NOT use markdown.
-Do NOT use code fences.
-Do NOT add explanations.
-
-Return exactly:
+Format:
 
 {
-    "title": "",
-    "rating": "",
-    "reviews": "",
-    "genre": "",
-    "developer": "",
-    "release": "",
     "features": [
         "",
         "",
@@ -468,20 +1104,6 @@ Return exactly:
     "review": ""
 }
 
-Rules:
-
-1. Keep the exact IGDB game title.
-2. Keep the IGDB rating.
-3. Keep the IGDB review count.
-4. Keep the IGDB genre.
-5. Keep the IGDB developer.
-6. Keep the IGDB release date.
-7. Provide exactly 5 short features.
-8. Keep the review below 120 words.
-9. Do not invent factual information.
-10. Do not create an image URL.
-11. If information is unavailable, use "N/A".
-
 GAME DATA:
 
 ${JSON.stringify(
@@ -491,54 +1113,55 @@ ${JSON.stringify(
 )}
 `;
 
-    // ======================================
-    // GEMINI MODEL
-    // ======================================
-
-    const model =
-        "gemini-3.5-flash-lite";
-
-    const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
-        {
-            method: "POST",
-
-            headers: {
-                "Content-Type":
-                    "application/json",
-
-                "x-goog-api-key":
-                    process.env.GEMINI_API_KEY
-            },
-
-            body: JSON.stringify({
-
-                contents: [
-                    {
-                        parts: [
-                            {
-                                text: prompt
-                            }
-                        ]
-                    }
-                ]
-
-            })
-        }
+    console.log(
+        "🤖 Gemini model:",
+        model
     );
+
+    const response =
+        await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+            {
+                method: "POST",
+
+                headers: {
+                    "Content-Type":
+                        "application/json",
+
+                    "x-goog-api-key":
+                        process.env.GEMINI_API_KEY
+                },
+
+                body:
+                    JSON.stringify({
+
+                        contents: [
+                            {
+                                parts: [
+                                    {
+                                        text:
+                                            prompt
+                                    }
+                                ]
+                            }
+                        ],
+
+                        generationConfig: {
+                            temperature: 0.4,
+                            responseMimeType:
+                                "application/json"
+                        }
+                    })
+            }
+        );
 
     const result =
         await response.json();
 
-    console.log(
-        "🤖 Gemini HTTP Status:",
-        response.status
-    );
-
     if (!response.ok) {
 
         console.error(
-            "❌ Gemini Error:",
+            "❌ Gemini error:",
             JSON.stringify(
                 result,
                 null,
@@ -548,7 +1171,7 @@ ${JSON.stringify(
 
         throw new Error(
             result.error?.message ||
-            "Gemini API request failed."
+            "Gemini request failed."
         );
     }
 
@@ -556,12 +1179,13 @@ ${JSON.stringify(
         result
             .candidates?.[0]
             ?.content?.parts?.[0]
-            ?.text || "";
+            ?.text ||
+        "";
 
     if (!text) {
 
         throw new Error(
-            "Gemini returned an empty response."
+            "Gemini returned empty response."
         );
     }
 
@@ -577,91 +1201,48 @@ ${JSON.stringify(
             )
             .trim();
 
-    // ======================================
-    // PARSE JSON
-    // ======================================
-
     try {
 
         const parsed =
             JSON.parse(text);
 
-        if (
-            !Array.isArray(
+        let features =
+            Array.isArray(
                 parsed.features
             )
-        ) {
+                ? parsed.features
+                : [];
 
-            parsed.features = [];
-        }
-
-        parsed.features =
-            parsed.features
+        features =
+            features
                 .filter(Boolean)
                 .slice(0, 5);
 
         while (
-            parsed.features.length < 5
+            features.length < 5
         ) {
 
-            parsed.features.push(
+            features.push(
                 "Information unavailable"
             );
         }
 
         return {
 
-            title:
-                gameInfo.title,
-
-            rating:
-                gameInfo.rating,
-
-            reviews:
-                gameInfo.reviews,
-
-            genre:
-                gameInfo.genre,
-
-            developer:
-                gameInfo.developer,
-
-            release:
-                gameInfo.release,
-
-            features:
-                parsed.features,
+            features,
 
             review:
                 parsed.review ||
                 "No AI review available."
         };
 
-    } catch {
+    } catch (error) {
 
         console.warn(
             "⚠️ Gemini JSON parsing failed."
         );
 
         return {
-
-            title:
-                gameInfo.title,
-
-            rating:
-                gameInfo.rating,
-
-            reviews:
-                gameInfo.reviews,
-
-            genre:
-                gameInfo.genre,
-
-            developer:
-                gameInfo.developer,
-
-            release:
-                gameInfo.release,
 
             features: [
                 "Gameplay",
@@ -677,9 +1258,9 @@ ${JSON.stringify(
     }
 }
 
-// ==========================================
-// REVIEW ENDPOINT
-// ==========================================
+// =====================================================
+// REVIEW API
+// =====================================================
 
 app.post(
     "/review",
@@ -692,17 +1273,19 @@ app.post(
 
             if (!game) {
 
-                return res.status(400).json({
+                return res
+                    .status(400)
+                    .json({
 
-                    success: false,
+                        success: false,
 
-                    error:
-                        "Game name is required."
-                });
+                        error:
+                            "Game name is required."
+                    });
             }
 
             console.log(
-                "======================================="
+                "\n======================================="
             );
 
             console.log(
@@ -710,94 +1293,237 @@ app.post(
                 game
             );
 
-            // ==================================
+            // =========================================
             // IGDB
-            // ==================================
+            // =========================================
 
-            const gameInfo =
+            const igdb =
                 await searchIGDB(game);
 
-            if (!gameInfo) {
+            if (!igdb) {
 
-                return res.status(404).json({
+                return res
+                    .status(404)
+                    .json({
 
-                    success: false,
+                        success: false,
 
-                    error:
-                        `Game "${game}" was not found on IGDB.`
-                });
+                        error:
+                            `Game "${game}" was not found on IGDB.`
+                    });
             }
 
+            // =========================================
+            // GOOGLE PLAY
+            // =========================================
+
+            const play =
+                await searchGooglePlay(
+                    game,
+                    igdb
+                );
+
+            // =========================================
+            // MERGE
+            // =========================================
+
+            const gameInfo =
+                mergeGameData(
+                    igdb,
+                    play
+                );
+
             console.log(
-                "✅ IGDB selected:",
+                "🎮 TITLE:",
                 gameInfo.title
             );
 
             console.log(
-                "🖼️ IGDB image URL:",
-                gameInfo.image ||
-                "No image"
+                "⭐ IGDB RATING:",
+                gameInfo.rating
             );
 
-            // ==================================
+            console.log(
+                "📝 IGDB RATINGS:",
+                gameInfo.reviews
+            );
+
+            console.log(
+                "📱 PLAY RATINGS:",
+                gameInfo.playRatings
+            );
+
+            console.log(
+                "💬 PLAY REVIEWS:",
+                gameInfo.playReviews
+            );
+
+            console.log(
+                "📥 DOWNLOADS:",
+                gameInfo.downloads
+            );
+
+            console.log(
+                "🎭 GENRE:",
+                gameInfo.finalGenre
+            );
+
+            console.log(
+                "🏢 DEVELOPER:",
+                gameInfo.finalDeveloper
+            );
+
+            // =========================================
             // GEMINI
-            // ==================================
+            // =========================================
 
-            const aiData =
-                await generateAIReview(
-                    gameInfo
+            let ai = {
+
+                features: [
+                    "Gameplay",
+                    "Game mechanics",
+                    "Visual design",
+                    "Sound and music",
+                    "Overall experience"
+                ],
+
+                review:
+                    "AI review unavailable."
+            };
+
+            try {
+
+                ai =
+                    await generateAIReview(
+                        gameInfo
+                    );
+
+            } catch (aiError) {
+
+                console.error(
+                    "⚠️ Gemini failed:",
+                    aiError.message
                 );
+            }
 
-            // ==================================
-            // RESPONSE
-            // ==================================
+            // =========================================
+            // FINAL RESPONSE
+            // =========================================
 
-            res.json({
+            return res.json({
 
                 success: true,
 
-                game: gameInfo,
+                game: {
+
+                    ...gameInfo,
+
+                    // UI-friendly fields
+
+                    title:
+                        gameInfo.title,
+
+                    image:
+                        gameInfo.image,
+
+                    rating:
+                        gameInfo.rating,
+
+                    reviews:
+                        gameInfo.reviews,
+
+                    downloads:
+                        gameInfo.downloads,
+
+                    genre:
+                        gameInfo.finalGenre,
+
+                    developer:
+                        gameInfo.finalDeveloper,
+
+                    release:
+                        gameInfo.release,
+
+                    summary:
+                        gameInfo.finalDescription,
+
+                    playReviews:
+                        gameInfo.playReviews,
+
+                    playRatings:
+                        gameInfo.playRatings,
+
+                    playRating:
+                        gameInfo.playRating
+                },
 
                 ai: {
 
-                    ...aiData,
+                    features:
+                        ai.features,
 
-                    image:
-                        gameInfo.image
+                    review:
+                        ai.review
                 }
+
             });
-
-            console.log(
-                "✅ Review completed successfully."
-            );
-
-            console.log(
-                "======================================="
-            );
 
         } catch (error) {
 
             console.error(
-                "❌ SERVER ERROR:"
+                "\n❌ SERVER ERROR:"
             );
 
             console.error(error);
 
-            res.status(500).json({
+            return res
+                .status(500)
+                .json({
 
-                success: false,
+                    success: false,
 
-                error:
-                    error.message ||
-                    "Server error."
-            });
+                    error:
+                        error.message ||
+                        "Server error."
+                });
         }
     }
 );
 
-// ==========================================
-// START SERVER
-// ==========================================
+// =====================================================
+// HEALTH CHECK
+// =====================================================
+
+app.get(
+    "/health",
+    (req, res) => {
+
+        res.json({
+
+            success: true,
+
+            server:
+                "AI Game Review Server",
+
+            igdb:
+                "enabled",
+
+            googlePlay:
+                "enabled",
+
+            gemini:
+                "enabled",
+
+            model:
+                process.env.GEMINI_MODEL ||
+                "gemini-3.5-flash-lite"
+        });
+    }
+);
+
+// =====================================================
+// START
+// =====================================================
 
 app.listen(
     PORT,
@@ -808,7 +1534,7 @@ app.listen(
         );
 
         console.log(
-            "🎮 AI Game Review Server Running"
+            "🎮 AI GAME REVIEW SERVER"
         );
 
         console.log(
@@ -816,15 +1542,29 @@ app.listen(
         );
 
         console.log(
-            "🎮 Game Data: IGDB"
+            "🎮 IGDB: ENABLED"
         );
 
         console.log(
-            "🖼️ Game Images: IGDB"
+            "📱 Google Play: ENABLED"
         );
 
         console.log(
-            "📥 Downloads: More than 50M+"
+            "📥 Dynamic downloads: ENABLED"
+        );
+
+        console.log(
+            "📝 Dynamic Play review count: ENABLED"
+        );
+
+        console.log(
+            "🤖 Gemini: ENABLED"
+        );
+
+        console.log(
+            "🤖 Model:",
+            process.env.GEMINI_MODEL ||
+            "gemini-3.5-flash-lite"
         );
 
         console.log(
